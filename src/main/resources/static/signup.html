@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>회원가입</title>
+    <style>
+        body {
+            background-color: #e8f5e9;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: white;
+            padding: 30px 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h2 {
+            color: #2e7d32;
+        }
+        label {
+            display: block;
+            margin: 15px 0 5px;
+            color: #388e3c;
+            font-weight: bold;
+        }
+        input {
+            padding: 8px;
+            width: 100%;
+            border: 1px solid #a5d6a7;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        button {
+            background-color: #66bb6a;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #43a047;
+        }
+        a {
+            font-size: 14px;
+            text-decoration: none;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>회원가입 💚</h2>
+    <form method="post" action="/signup">
+        <label>아이디</label>
+        <input type="text" name="username" required>
+        <label>비밀번호</label>
+        <input type="password" name="password" required>
+        <button type="submit">회원가입</button>
+    </form>
+    <p><a href="/login.html">이미 계정이 있으신가요? 로그인</a></p>
+</div>
+</body>
+</html>
