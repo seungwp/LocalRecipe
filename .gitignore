@@ -38,3 +38,4 @@ out/
 
 /Users/carpbreadj/Downloads/ocrproject/src/main/resources/ocr-key.json
 src/main/resources/ocr-key.json
+src/main/resources/application.properties
