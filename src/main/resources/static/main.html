@@ -1,12 +1,216 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>메인 페이지</title>
+  <title>main</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #e8f5e9;
+    }
+    .banner {
+      background-color: #66bb6a;
+      color: white;
+      text-align: center;
+      padding: 50px 0;
+      font-size: 36px;
+      font-weight: bold;
+    }
+    .menu-bar {
+      background-color: #a5d6a7;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+    }
+    .menu-bar ul {
+      list-style: none;
+      display: flex;
+      margin: 0;
+      padding: 0;
+    }
+    .menu-bar ul li {
+      margin: 0 10px;
+    }
+    .menu-bar ul li a {
+      color: #2e7d32;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .container {
+      padding: 30px;
+    }
+    .row-box {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .upload-section, .roulette-section {
+      flex: 1;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      min-width: 300px;
+    }
+    #ingredientResult {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    .ingredient-item {
+      margin-bottom: 5px;
+    }
+    button {
+      background-color: #66bb6a;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #43a047;
+    }
+    .wheel {
+      width: 100%;
+      height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 10px solid #a5d6a7;
+      border-radius: 50%;
+      font-size: 24px;
+      font-weight: bold;
+      color: #2e7d32;
+      margin: 20px 0;
+      background-color: #c8e6c9;
+    }
+  </style>
 </head>
 <body>
-<h1>🎉 로그인에 성공했습니다!</h1>
-<p>환영합니다. 로그인 상태입니다.</p>
-<a href="/logout">로그아웃</a>
+<div class="banner">메인 페이지</div>
+<div class="menu-bar">
+  <ul>
+    <li><a href="/pages/index">홈</a></li>
+    <li><a href="/pages/board">게시판</a></li>
+  </ul>
+  <ul>
+    <li><a href="/logout">로그아웃</a></li>
+  </ul>
+</div>
+
+<div class="container">
+  <div class="row-box">
+    <!-- OCR 업로드 섹션 -->
+    <div class="upload-section">
+      <h3>📸 영수증 사진 업로드</h3>
+      <form id="ocrForm">
+        <input type="file" id="fileInput" name="file" accept="image/*" required>
+        <br><br>
+        <button type="submit">OCR 추출</button>
+      </form>
+      <div id="ingredientResult"></div>
+    </div>
+
+    <!-- 룰렛 섹션 (요리 추천) -->
+    <div class="roulette-section">
+      <h4>🍳 오늘의 요리 추천 </h4>
+      <canvas id="rouletteCanvas" width="280" height="280" style="margin: 0 auto; display: block;"></canvas>
+      <button onclick="spinRoulette()">룰렛 돌리기</button>
+      <p id="rouletteResult" style="margin-top: 20px; font-weight: bold;"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const ocrForm = document.getElementById("ocrForm");
+  const resultDiv = document.getElementById("ingredientResult");
+
+  ocrForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+    const file = document.getElementById("fileInput").files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    fetch("/api/ocr", {
+      method: "POST",
+      body: formData
+    })
+            .then(res => res.text())
+            .then(data => {
+              const items = data.split(/[\n,]+/).filter(item => item.trim() !== "");
+              resultDiv.innerHTML = "📋 추출된 재료:<br>" + items.map(item => `<div class='ingredient-item'>• ${item}</div>`).join("");
+            })
+            .catch(err => {
+              resultDiv.textContent = "❌ 오류 발생: " + err.message;
+            });
+  });
+
+  const canvas = document.getElementById("rouletteCanvas");
+  const ctx = canvas.getContext("2d");
+  const radius = canvas.width / 2;
+  let rouletteItems = [
+    "김치볶음밥", "된장찌개", "감자조림", "계란말이",
+    "불고기", "비빔국수", "닭갈비", "샐러드볼",
+    "연어덮밥", "김밥", "유부초밥", "베이컨에그롤"
+  ];
+  let angle = 0;
+  let spinning = false;
+
+  function drawRoulette() {
+    const anglePerItem = (2 * Math.PI) / rouletteItems.length;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    for (let i = 0; i < rouletteItems.length; i++) {
+      const startAngle = angle + i * anglePerItem;
+      const endAngle = startAngle + anglePerItem;
+
+      ctx.beginPath();
+      ctx.moveTo(radius, radius);
+      ctx.arc(radius, radius, radius, startAngle, endAngle);
+      ctx.fillStyle = i % 2 === 0 ? '#a5d6a7' : '#81c784';
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(radius, radius);
+      ctx.rotate(startAngle + anglePerItem / 2);
+      ctx.fillStyle = 'black';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(rouletteItems[i], radius / 2 - 15, 0);
+      ctx.restore();
+    }
+  }
+
+  function spinRoulette() {
+    if (spinning) return;
+    spinning = true;
+    let totalRotation = Math.PI * 10 + Math.random() * 2 * Math.PI;
+    const duration = 2000;
+    const start = performance.now();
+
+    function animate(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      angle = totalRotation * eased;
+      drawRoulette();
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        const index = Math.floor(((2 * Math.PI - (angle % (2 * Math.PI))) / (2 * Math.PI)) * rouletteItems.length) % rouletteItems.length;
+        const result = rouletteItems[index];
+        document.getElementById("rouletteResult").textContent = `🎉 오늘의 추천 요리는 "${result}" 입니다!`;
+        spinning = false;
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  drawRoulette();
+</script>
 </body>
 </html>
