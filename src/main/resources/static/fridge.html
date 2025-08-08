@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LocalRecipe - 나의 냉장고</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <style>
+        :root {
+            --primary: #66bb6a;
+            --primary-light: #a5d6a7;
+            --primary-dark: #388e3c;
+            --bg-light: #e8f5e9;
+            --text: #333;
+            --border: #c8e6c9;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+        }
+        .banner {
+            background-color: var(--primary);
+            color: white;
+            text-align: center;
+            padding: 40px 0;
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .menu-bar {
+            background-color: var(--primary-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+        }
+        .menu-bar a {
+            color: var(--primary-dark);
+            text-decoration: none;
+            margin: 0 10px;
+            font-weight: 600;
+        }
+        .menu-bar a.active {
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 2px;
+        }
+        .container-main {
+            padding: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .card-header {
+            background-color: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+        .ingredient-item {
+            padding: 5px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .table thead {
+            background-color: var(--primary-light);
+        }
+        .table th,
+        .table td {
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+<div class="banner">LocalRecipe</div>
+<div class="menu-bar">
+    <div>
+        <a href="index.html">홈</a>
+        <a href="fridge.html" class="active">나의 냉장고</a>
+    </div>
+    <div>
+        <a href="/logout">로그아웃</a>
+    </div>
+</div>
+
+<div class="container-main">
+    <!-- Receipt Upload Card -->
+    <div class="card">
+        <div class="card-header">영수증 인식</div>
+        <div class="card-body">
+            <!-- OCR Form -->
+            <form id="ocrForm">
+                <input type="file" id="fileInput" name="file" accept="image/*" required hidden>
+                <button type="button" id="selectFileBtn" class="btn btn-primary mb-2">파일 선택</button>
+                <span id="selectedFile">선택된 파일 없음</span>
+                <br><br>
+                <button type="submit" class="btn btn-light border mb-3">재료 추출하기</button>
+            </form>
+            <h5>추출된 재료</h5>
+            <div id="extractedList">
+                <p class="text-muted">아직 추출된 재료가 없습니다.</p>
+            </div>
+            <button id="addBtn" class="btn btn-primary mt-3">냉장고에 추가</button>
+        </div>
+    </div>
+
+    <!-- My Fridge Card -->
+    <div class="card">
+        <div class="card-header">나의 냉장고</div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>재료명</th>
+                    <th>등록일자</th>
+                    <th>삭제</th>
+                </tr>
+                </thead>
+                <tbody id="fridgeTable">
+                <tr><td colspan="3" class="text-center text-muted">냉장고가 비어 있습니다.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 이전 세션 자료 제거
+    localStorage.removeItem('fridgeItems');
+
+    let extracted = [];
+    let fridge = [];
+
+    const ocrForm = document.getElementById('ocrForm');
+    const fileInput = document.getElementById('fileInput');
+    const selectBtn = document.getElementById('selectFileBtn');
+    const selText = document.getElementById('selectedFile');
+    const extractedList = document.getElementById('extractedList');
+    const addBtn = document.getElementById('addBtn');
+    const tableBody = document.getElementById('fridgeTable');
+
+    // 파일 선택 트리거
+    selectBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+        const f = fileInput.files[0];
+        selText.textContent = f ? f.name : '선택된 파일 없음';
+    });
+
+    // OCR 폼 제출
+    ocrForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const f = fileInput.files[0];
+        if (!f) return alert('먼저 파일을 선택해주세요.');
+        const formData = new FormData(ocrForm);
+        fetch('/api/ocr', { method: 'POST', body: formData })
+            .then(res => res.text())
+            .then(txt => {
+                extracted = txt.split(/[\n,]+/).map(s => s.trim()).filter(s => s);
+                renderExtracted();
+            })
+            .catch(() => alert('OCR 처리 중 오류 발생'));
+    });
+
+    // 추출된 재료 렌더링
+    function renderExtracted() {
+        extractedList.innerHTML = '';
+        if (!extracted.length) {
+            extractedList.innerHTML = '<p class="text-muted">추출된 재료가 없습니다.</p>';
+            return;
+        }
+        extracted.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'ingredient-item';
+            div.textContent = '• ' + item;
+            extractedList.appendChild(div);
+        });
+    }
+
+    // 냉장고에 추가
+    addBtn.addEventListener('click', () => {
+        const today = new Date().toLocaleDateString('ko-KR');
+        let count = 0;
+        extracted.forEach(it => {
+            if (!fridge.find(x => x.name === it)) {
+                fridge.push({ name: it, date: today });
+                count++;
+            }
+        });
+        if (count) {
+            localStorage.setItem('fridgeItems', JSON.stringify(fridge));
+            renderFridge();
+            alert(count + '개 재료가 추가되었습니다.');
+        } else alert('추출된 재료가 없거나 이미 추가된 항목입니다.');
+    });
+
+    // 냉장고 렌더링
+    function renderFridge() {
+        tableBody.innerHTML = '';
+        if (!fridge.length) {
+            tableBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">냉장고가 비어 있습니다.</td></tr>';
+            return;
+        }
+        fridge.forEach((it, i) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${it.name}</td>
+                <td>${it.date}</td>
+                <td><button class="btn btn-sm btn-outline-danger" onclick="del(${i})">삭제</button></td>`;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // 삭제 함수
+    window.del = idx => {
+        if (confirm('삭제하시겠습니까?')) {
+            fridge.splice(idx, 1);
+            localStorage.setItem('fridgeItems', JSON.stringify(fridge));
+            renderFridge();
+        }
+    };
+
+    // 초기 실행
+    document.addEventListener('DOMContentLoaded', () => {
+        renderExtracted(); renderFridge();
+    });
+</script>
+</body>
+</html>

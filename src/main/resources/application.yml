@@ -7,4 +7,4 @@ spring:
 
 gemini:
   api:
-    key: AIzaSyB7McE55rCxpn-SZ394SXobGcD6ovlCoV8
+    key: ${GEMINI_API_KEY}
