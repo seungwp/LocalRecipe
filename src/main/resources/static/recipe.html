@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>레시피 추천</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background-color: #ffe6ef; }
+    .container { max-width: 900px; margin-top: 30px; }
+    .card { box-shadow: 0 4px 10px rgba(168,62,98,0.08); border: none; }
+    .btn-primary { background-color: #ff8fb1; border-color: #ff8fb1; font-weight: bold; }
+    .btn-primary:hover { background-color: #e26e93; border-color: #e26e93; }
+    .preview { margin-top: 10px; max-height: 220px; object-fit: contain; }
+    .section-title { font-weight: 700; color: #a83e62; }
+    .nav { background-color: #ffd1dc; padding: 12px 16px; display: flex; justify-content: space-between; }
+    .nav a { color: #a83e62; font-weight: bold; text-decoration: none; margin-right: 16px; }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <div>
+      <a href="main.html">홈</a>
+      <a href="recipe.html">레시피추천</a>
+    </div>
+    <div>
+      <a href="/logout">로그아웃</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2 class="mb-3">OCR 기반 레시피 추천</h2>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <form id="ocrForm">
+          <div class="form-group">
+            <label for="imageFile" class="section-title">영수증/이미지 업로드</label>
+            <input type="file" id="imageFile" name="file" accept="image/*" class="form-control-file" required />
+            <img id="preview" class="preview d-none" alt="preview" />
+          </div>
+          <button type="submit" class="btn btn-primary">추출 및 추천 받기</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="section-title">추출된 재료</h5>
+            <div id="ingredients">이미지를 업로드하고 추출을 시작하세요.</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="section-title">추천 레시피</h5>
+            <div id="recipes">재료를 바탕으로 레시피를 추천합니다.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const imageFile = document.getElementById('imageFile');
+    const preview = document.getElementById('preview');
+    const form = document.getElementById('ocrForm');
+    const ingredientsEl = document.getElementById('ingredients');
+    const recipesEl = document.getElementById('recipes');
+
+    imageFile.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) { preview.classList.add('d-none'); return; }
+      const url = URL.createObjectURL(file);
+      preview.src = url;
+      preview.classList.remove('d-none');
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!imageFile.files || imageFile.files.length === 0) return;
+
+      ingredientsEl.textContent = '재료를 추출 중...';
+      recipesEl.textContent = '추천 레시피 생성 중...';
+
+      const fd = new FormData();
+      fd.append('file', imageFile.files[0]); // must match @RequestParam MultipartFile file
+
+      try {
+        const res = await fetch('/api/ocr/recommend', { method: 'POST', body: fd });
+        if (!res.ok) throw new Error('OCR 추천 API 요청 실패');
+        const data = await res.json();
+
+        const items = Array.isArray(data.ingredients) ? data.ingredients : [];
+        const recs = Array.isArray(data.recipes) ? data.recipes : [];
+
+        // Ingredients
+        ingredientsEl.innerHTML = items.length
+          ? ('<ul>' + items.map(i => `<li>${i}</li>`).join('') + '</ul>')
+          : '<span>추출된 재료가 없습니다.</span>';
+
+        // Recipes
+        if (recs.length) {
+          const html = recs.map(r => {
+            const name = r.name || '추천 레시피';
+            const need = Array.isArray(r.need) ? r.need.join(', ') : '';
+            const desc = r.desc || '';
+            return `<div class="mb-3 p-2 border rounded">
+                      <div><strong>${name}</strong></div>
+                      <div class="text-muted" style="font-size: 0.9rem">필요 재료: ${need}</div>
+                      <div>${desc}</div>
+                    </div>`;
+          }).join('');
+          recipesEl.innerHTML = html;
+        } else {
+          recipesEl.innerHTML = '<span>추천 결과가 없습니다.</span>';
+        }
+      } catch (err) {
+        console.error(err);
+        ingredientsEl.textContent = '오류가 발생했습니다: ' + err.message;
+        recipesEl.textContent = '';
+      }
+    });
+  </script>
+</body>
+</html>

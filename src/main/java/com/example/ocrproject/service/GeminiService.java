@@ -28,12 +28,18 @@ public class GeminiService {
     public String extractItemsFromText(String ocrText) {
         try {
             String prompt = """
-                    다음은 OCR로 추출된 영수증 텍스트입니다. 이 텍스트에서 ‘요리에 사용할 수 있는 재료’만 뽑아주세요.\s
+                    다음은 OCR로 추출된 영수증 텍스트입니다. 이 텍스트에서 '요리에 사용할 수 있는 재료명'만 추출하세요.
                     
-                    - 가격, 날짜, 결제 정보, 매장명 등은 제외해주세요. \s
-                    - ‘딸기 요거트’, ‘크림치즈 베이글’처럼 하나의 항목으로 구성된 가공 식품은 **하나의 재료로 묶어서** 인식해주세요. \s
-                    - 음식 재료에 해당하지 않는 상품은 제외해주세요. \s
-                    - 결과는 ‘한글’, ‘쉼표로 구분된 단어 리스트’ 형태로만 출력해주세요. 예: 사과, 양파, 햄, 치즈, 딸기 요거트
+                    지침:
+                    - 가격, 수량, 날짜, 결제 정보, 매장명, 광고 문구, 카테고리 표기는 모두 제외합니다.
+                    - 브랜드명/상품명 수식(예: 울월스, 존 웨스트 등)은 제거하고 '재료명'만 남깁니다.
+                    - 가공 식품이라도 요리에 쓰일 수 있으면 하나의 재료로 묶어 표기합니다. (예: 딸기 요거트, 크림치즈 베이글)
+                    - 불용어/형용 표현(클래식, 라이트, 풀팻 등)은 제거하고 핵심 재료명만 남깁니다.
+                    - 출력 형식은 '한 줄'에 '쉼표로 구분된 순수 재료명'만 포함합니다.
+                    - 절대 다른 문구, 설명, 번호, 불릿, 따옴표, 마크다운을 넣지 마세요.
+                    - 예시 출력: 사과, 양파, 햄, 치즈, 딸기 요거트
+
+                    OCR 텍스트:
 """ + ocrText;
 
             // 요청 JSON 구성
@@ -82,7 +88,59 @@ public class GeminiService {
             return textNode.asText();
 
         } catch (Exception e) {
-            throw new RuntimeException("Gemini API 호출 실패: " + e.getMessage(), e);
+            throw new RuntimeException("Gemini API : " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Translate arbitrary English text to Korean. Output must be ONLY the translated Korean text
+     * without extra explanations, quotes, or markdown.
+     */
+    public String translateToKorean(String text) {
+        if (text == null || text.isBlank()) return text;
+        try {
+            String prompt = """
+                    아래 영어 텍스트를 자연스러운 한국어로 번역하세요.\n
+                    규칙:\n
+                    - 출력에는 번역문만 포함하세요.\n
+                    - 설명, 따옴표, 번호, 불릿, 마크다운을 포함하지 마세요.\n
+                    
+                    영어 텍스트:\n
+                    """ + text;
+
+            ObjectNode rootNode = mapper.createObjectNode();
+            ArrayNode contents = mapper.createArrayNode();
+            ObjectNode contentNode = mapper.createObjectNode();
+            ArrayNode parts = mapper.createArrayNode();
+            ObjectNode partText = mapper.createObjectNode();
+            partText.put("text", prompt);
+            parts.add(partText);
+            contentNode.set("parts", parts);
+            contents.add(contentNode);
+            rootNode.set("contents", contents);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(GEMINI_URL + apiKey))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(rootNode)))
+                    .build();
+
+            HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+            String responseBody = response.body();
+
+            JsonNode json = mapper.readTree(responseBody);
+            JsonNode candidates = json.get("candidates");
+            if (candidates == null || !candidates.isArray() || candidates.size() == 0) {
+                throw new RuntimeException("Gemini API : candidates");
+            }
+            JsonNode content = candidates.get(0).path("content");
+            JsonNode partsArray = content.path("parts");
+            if (!partsArray.isArray() || partsArray.size() == 0) {
+                throw new RuntimeException("Gemini API : parts ");
+            }
+            return partsArray.get(0).path("text").asText();
+        } catch (Exception e) {
+            throw new RuntimeException("Gemini : " + e.getMessage(), e);
         }
     }
 }

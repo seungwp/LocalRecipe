@@ -9,6 +9,11 @@ import org.springframework.web.bind.annotation.*;
 
 @Controller
 public class AuthController {
+    @GetMapping("/")
+    public String home() {
+    return "redirect:/login.html";
+    }
+
 
     @Autowired
     private UserRepository userRepository;
@@ -38,4 +43,5 @@ public class AuthController {
         session.invalidate();
         return "redirect:/login.html";
     }
+    
 }

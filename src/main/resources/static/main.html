@@ -6,20 +6,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
   <style>
-    body { font-family: 'Segoe UI', sans-serif; background-color: #e8f5e9; margin:0; }
-    .banner { background-color: #66bb6a; color: white; text-align: center; padding: 50px 0; font-size: 36px; font-weight: bold; }
-    .menu-bar { background-color: #a5d6a7; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; }
+    body { font-family: 'Segoe UI', sans-serif; background-color: #ffe6ef; margin:0; }
+    .banner { background-color: #ff8fb1; color: white; text-align: center; padding: 50px 0; font-size: 36px; font-weight: bold; }
+    .menu-bar { background-color: #ffd1dc; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; gap: 12px; }
     .menu-bar ul { list-style: none; display: flex; margin: 0; padding: 0; }
     .menu-bar ul li { margin: 0 10px; }
-    .menu-bar ul li a { color: #2e7d32; text-decoration: none; font-weight: bold; }
+    .menu-bar ul li a { color: #a83e62; text-decoration: none; font-weight: bold; }
+    .search-box form { display: flex; gap: 8px; align-items: center; }
+    .search-box input { padding: 6px 10px; border: 1px solid #ffc1d6; border-radius: 6px; background: #fff; color: #a83e62; }
+    .search-box button { background-color: #ff8fb1; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .search-box button:hover { background-color: #e26e93; }
     .container { padding: 30px; }
     .row-box { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
     .recipe-section {
       flex: 1;
-      background: white;
+      background: #fff;
       padding: 20px;
       border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 10px rgba(168,62,98,0.08);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -42,28 +46,34 @@
     }
     .roulette-section {
       flex: 1;
-      background: white;
+      background: #fff;
       padding: 20px;
       border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 10px rgba(168,62,98,0.08);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
       min-width: 300px;
     }
-    button { background-color: #66bb6a; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-    button:hover { background-color: #43a047; }
-    #rouletteCanvas { border: 10px solid #a5d6a7; border-radius: 50%; background-color: white; }
+    button { background-color: #ff8fb1; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    button:hover { background-color: #e26e93; }
+    #rouletteCanvas { border: 10px solid #ffd1dc; border-radius: 50%; background-color: white; }
   </style>
 </head>
 <body>
 <div class="banner">메인 페이지</div>
 <div class="menu-bar">
   <ul>
-    <li><a href="fridge.html">나의 냉장고</a></li>
-    <li><a href="#">게시판</a></li>
+    <li><a href="main.html">홈</a></li>
+    <li><a href="recipe.html">레시피추천</a></li>
   </ul>
+  <div class="search-box">
+    <form id="searchForm" onsubmit="return goSearch(event)">
+      <input id="q" type="text" placeholder="재료/요리 검색" aria-label="검색어" />
+      <button type="submit">검색</button>
+    </form>
+  </div>
   <ul>
     <li><a href="/logout">로그아웃</a></li>
   </ul>
@@ -98,6 +108,15 @@
 </div>
 
 <script>
+  // 검색 이동
+  function goSearch(e) {
+    e.preventDefault();
+    var v = document.getElementById('q').value || '';
+    window.location.href = 'recipe.html?q=' + encodeURIComponent(v);
+    return false;
+  }
+
+  // 룰렛 UI
   const canvas = document.getElementById("rouletteCanvas");
   const ctx = canvas.getContext("2d");
   const radius = canvas.width / 2;
@@ -110,7 +129,7 @@
       ctx.beginPath();
       ctx.moveTo(radius, radius);
       ctx.arc(radius, radius, radius, angle + i * per, angle + (i + 1) * per);
-      ctx.fillStyle = i % 2 ? '#81c784' : '#a5d6a7';
+      ctx.fillStyle = i % 2 ? '#ffc1d6' : '#ffd6e6';
       ctx.fill();
       ctx.save();
       ctx.translate(radius, radius);
